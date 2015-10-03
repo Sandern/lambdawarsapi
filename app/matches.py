@@ -2,6 +2,11 @@ from flask import request, jsonify
 from . import app
 import uuid
 import os
+import zipfile
+import json
+
+from .database import db_session
+from .models import Match, PlayerMatchResult
 
 if not os.path.exists(app.instance_path):
     os.mkdir(app.instance_path)
@@ -13,8 +18,73 @@ if not os.path.exists(matches_folder):
 
 @app.route('/matches/upload', methods=['POST'])
 def upload_file():
-    path = os.path.join(matches_folder, uuid.uuid4().hex)
+    """ Records a match result from a game server. """
     f = request.files['match_data']
+
+    # Create the match id
+    match_uuid = uuid.uuid4().hex
+
+    # Read the file as json
+    # Could be too large? Probably not, but maybe.
+    z = zipfile.ZipFile(f.stream)
+    match_data = json.loads(z.read('stats.json').decode("utf-8"))
+
+    # Create the match entry
+    m_entry = Match()
+    m_entry.mode = match_data['mode']
+    m_entry.map = match_data['map']
+    m_entry.match_uuid = match_uuid
+
+    db_session.add(m_entry)
+    db_session.commit()
+
+    # Link players to match
+    for player, data in match_data['players'].items():
+        # No steamid means the player is a cpu
+        if 'steamid' not in data:
+            continue
+        p_entry = PlayerMatchResult()
+        p_entry.steamid = data['steamid']
+        p_entry.match_id = m_entry.id
+
+        db_session.add(p_entry)
+
+    db_session.commit()
+
+    # Save the match file
+    path = os.path.join(matches_folder, match_uuid)
+
+    f.stream.seek(0)
     f.save(path)
 
     return jsonify(success=True)
+
+@app.route('/player/matches/list/<steamid>', methods=['GET', 'POST'])
+def list_matches_for_steamid(steamid):
+    """ Lists the match history for a player. """
+    result = Match.query.join(PlayerMatchResult, Match.id==PlayerMatchResult.match_id) \
+        .add_columns(PlayerMatchResult.steamid, Match.match_uuid, Match.map, Match.mode) \
+        .filter(PlayerMatchResult.steamid == steamid).all()
+
+    response = {'matches': []}
+    for r in result:
+        response['matches'].append({
+            'steamid': r.steamid,
+            'match_uuid': r.match_uuid,
+            'mode': r.mode,
+            'map': r.map,
+        })
+
+    return jsonify(response)
+
+@app.route('/player/matches/get/<match_uuid>', methods=['GET', 'POST'])
+def get_matches_for_uuid(match_uuid):
+    result = Match.query.filter(Match.match_uuid == match_uuid).one()
+
+    path = os.path.join(matches_folder, match_uuid)
+
+    with open(path, 'rb') as f:
+        z = zipfile.ZipFile(f)
+        match_data = json.loads(z.read('stats.json').decode("utf-8"))
+
+    return jsonify(match_data)

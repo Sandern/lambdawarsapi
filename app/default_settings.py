@@ -1,5 +1,5 @@
 DEBUG = False
 TESTING = False
-DATABASE_URI = 'sqlite://:memory:'
+SQLALCHEMY_DATABASE_URI = 'sqlite:///tmp/test.db'
 
 MATCHES_FOLDER = 'matches'
