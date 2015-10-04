@@ -1,11 +1,11 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, BigInteger, String, Boolean, ForeignKey
 from .database import Base
 
 class Match(Base):
     __tablename__ = 'matches'
     id = Column(Integer, primary_key=True)
 
-    submitter_steamid = Column(String(150))
+    submitter_steamid = Column(BigInteger)
     submitter_verified = Column(Boolean)
 
     # 32 byte uuid. Also identifies the filename in the matches folder.
@@ -19,5 +19,5 @@ class PlayerMatchResult(Base):
     """ Represents a match in which the player participated. """
     __tablename__ = 'player_match_results'
     id = Column(Integer, primary_key=True)
-    steamid = Column(String(150))
+    steamid = Column(BigInteger)
     match_id = Column(Integer, ForeignKey(Match.id), nullable=False)

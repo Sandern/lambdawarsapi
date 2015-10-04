@@ -5,6 +5,9 @@ import os
 import zipfile
 import json
 
+from valve.steam.id import SteamID
+import bitstruct
+
 from .database import db_session
 from .models import Match, PlayerMatchResult
 
@@ -15,6 +18,21 @@ matches_folder = os.path.join(app.instance_path, app.config['MATCHES_FOLDER'])
 if not os.path.exists(matches_folder):
     os.mkdir(matches_folder)
 
+
+def build_steamid(steamid_unparsed):
+    if steamid_unparsed.isdigit():
+        universe, type, instance, account_number = bitstruct.unpack('u8u4u20u32',
+                             bitstruct.pack('u64', int(steamid_unparsed)))
+
+        if instance == 1:
+            instance = 0
+            account_number = int(account_number / 2)
+
+        return SteamID(account_number, instance, type, universe)
+
+
+    id = SteamID.from_text(steamid_unparsed)
+    return id
 
 @app.route('/matches/upload', methods=['POST'])
 def upload_file():
@@ -43,8 +61,11 @@ def upload_file():
         # No steamid means the player is a cpu
         if 'steamid' not in data:
             continue
+
+        steamid = build_steamid(data['steamid'])
+
         p_entry = PlayerMatchResult()
-        p_entry.steamid = data['steamid']
+        p_entry.steamid = steamid.as_64()
         p_entry.match_id = m_entry.id
 
         db_session.add(p_entry)
@@ -62,9 +83,11 @@ def upload_file():
 @app.route('/player/matches/list/<steamid>', methods=['GET', 'POST'])
 def list_matches_for_steamid(steamid):
     """ Lists the match history for a player. """
+    steamid = build_steamid(steamid)
+
     result = Match.query.join(PlayerMatchResult, Match.id==PlayerMatchResult.match_id) \
         .add_columns(PlayerMatchResult.steamid, Match.match_uuid, Match.map, Match.mode) \
-        .filter(PlayerMatchResult.steamid == steamid).all()
+        .filter(PlayerMatchResult.steamid == steamid.as_64()).all()
 
     response = {'matches': []}
     for r in result:
