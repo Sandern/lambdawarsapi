@@ -88,8 +88,9 @@ def list_matches_for_steamid(steamid):
     """ Lists the match history for a player. """
     steamid = build_steamid(steamid)
 
-    result = Match.query.join(PlayerMatchResult, Match.id==PlayerMatchResult.match_id) \
-        .add_columns(PlayerMatchResult.steamid, Match.match_uuid, Match.map, Match.mode) \
+    result = Match.query.join(PlayerMatchResult, Match.id == PlayerMatchResult.match_id) \
+        .add_columns(PlayerMatchResult.steamid, Match.match_uuid, Match.map, Match.mode,
+                     Match.duration, Match.start_date) \
         .filter(PlayerMatchResult.steamid == steamid.as_64()).all()
 
     response = {'matches': []}
