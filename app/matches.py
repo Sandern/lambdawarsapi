@@ -49,6 +49,8 @@ def upload_file():
 
     # Create the match entry
     m_entry = Match()
+    m_entry.start_date = match_data['start_date']
+    m_entry.duration = match_data['duration']
     m_entry.mode = match_data['mode']
     m_entry.map = match_data['map']
     m_entry.match_uuid = match_uuid
@@ -94,6 +96,8 @@ def list_matches_for_steamid(steamid):
         response['matches'].append({
             'steamid': r.steamid,
             'match_uuid': r.match_uuid,
+            'duration': r.duration,
+            'start_date': r.start_date,
             'mode': r.mode,
             'map': r.map,
         })

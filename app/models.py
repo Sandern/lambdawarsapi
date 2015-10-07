@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, BigInteger, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, Float, BigInteger, String, Boolean, DateTime, ForeignKey
 from .database import Base
 
 class Match(Base):
@@ -12,6 +12,8 @@ class Match(Base):
     match_uuid = Column(String(32), unique=True)
 
     # Metadata of the match
+    start_date = Column(DateTime)
+    duration = Column(Float)
     mode = Column(String(150))
     map = Column(String(150))
 
