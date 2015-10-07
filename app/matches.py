@@ -4,6 +4,7 @@ import uuid
 import os
 import zipfile
 import json
+from datetime import datetime
 
 from valve.steam.id import SteamID
 import bitstruct
@@ -49,7 +50,7 @@ def upload_file():
 
     # Create the match entry
     m_entry = Match()
-    m_entry.start_date = match_data['start_date']
+    m_entry.start_date = datetime.strptime(match_data['start_date'],'%Y-%m-%d %H:%M:%S')
     m_entry.duration = match_data['duration']
     m_entry.mode = match_data['mode']
     m_entry.map = match_data['map']
