@@ -42,4 +42,14 @@ def authenticate_ticket(ticket):
         'appid': 270370,
         'ticket': ticket,
     })
-    print('Steam api response: ', r.text)
+
+    resp = r.json()
+
+    print('Steam api response: ', resp)
+
+    params = resp['response']['params']
+
+    if params['result'] != 'OK':
+        return None
+
+    return build_steamid(params['steamid'])

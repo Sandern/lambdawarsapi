@@ -65,8 +65,10 @@ def verify_player():
     if not steamid:
         return jsonify(success=False)
 
-    result = PlayerMatchResult.query.filter(PlayerMatchResult.steamid == steamid.as_64() and
-                                            PlayerMatchResult.match_uuid == match_uuid).one()
+    m_entry = Match.query.filter(Match.match_uuid == match_uuid).one()
+
+    result = PlayerMatchResult.query.filter(PlayerMatchResult.steamid == steamid.as_64(),
+                                            PlayerMatchResult.match_id == m_entry.id).one()
 
     result.verified = True
     db_session.commit()
@@ -117,6 +119,8 @@ def _matches_to_list(result):
             'mode': r.mode,
             'map': r.map,
         })
+        if hasattr(r, 'verified'):
+            matches[-1]['verified'] = r.verified
     return matches
 
 
@@ -127,7 +131,7 @@ def list_matches_for_steamid(steamid):
 
     result = Match.query.join(PlayerMatchResult, Match.id == PlayerMatchResult.match_id) \
         .add_columns(PlayerMatchResult.steamid, Match.match_uuid, Match.map, Match.mode,
-                     Match.duration, Match.start_date) \
+                     Match.duration, Match.start_date, PlayerMatchResult.verified) \
         .filter(PlayerMatchResult.steamid == steamid.as_64()).all()
 
     return jsonify({'matches': _matches_to_list(result)})
