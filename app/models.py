@@ -1,28 +1,27 @@
-from sqlalchemy import Column, Integer, Float, BigInteger, String, Boolean, DateTime, ForeignKey
-from .database import Base
+from .database import db
 
-class Match(Base):
+class Match(db.Model):
     __tablename__ = 'matches'
-    id = Column(Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
 
-    submitter_ip = Column(String(150), nullable=False)
+    submitter_ip = db.Column(db.String(150), nullable=False)
 
     # 32 byte uuid. Also identifies the filename in the matches folder.
-    match_uuid = Column(String(32), unique=True, nullable=False)
+    match_uuid = db.Column(db.String(32), unique=True, nullable=False)
 
     # Metadata of the match set at start
-    start_date = Column(DateTime, nullable=False)
-    mode = Column(String(150), nullable=False)
-    map = Column(String(150), nullable=False)
+    start_date = db.Column(db.DateTime, nullable=False)
+    mode = db.Column(db.String(150), nullable=False)
+    map = db.Column(db.String(150), nullable=False)
 
     # Metadata set when match is finished
-    duration = Column(Float)
+    duration = db.Column(db.Float)
 
-class PlayerMatchResult(Base):
+class PlayerMatchResult(db.Model):
     """ Represents a match in which the player participated. """
     __tablename__ = 'player_match_results'
-    id = Column(Integer, primary_key=True)
-    steamid = Column(BigInteger, nullable=False)
-    match_id = Column(Integer, ForeignKey(Match.id), nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    steamid = db.Column(db.BigInteger, nullable=False)
+    match_id = db.Column(db.Integer, db.ForeignKey(Match.id), nullable=False)
     # The Game Server creates the initial entries, the players must send a request to confirm they are in the match
-    verified = Column(Boolean, nullable=False)
+    verified = db.Column(db.Boolean, nullable=False)

@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 
 from .util import build_steamid, authenticate_ticket
-from .database import db_session
+from .database import db
 from .models import Match, PlayerMatchResult
 
 if not os.path.exists(app.instance_path):
@@ -33,8 +33,8 @@ def record_match_start():
     m_entry.map = match_data['map']
     m_entry.match_uuid = match_uuid
 
-    db_session.add(m_entry)
-    db_session.commit()
+    db.session.add(m_entry)
+    db.session.commit()
 
     # Link players to match
     for player, data in match_data['players'].items():
@@ -49,9 +49,9 @@ def record_match_start():
         p_entry.match_id = m_entry.id
         p_entry.verified = False
 
-        db_session.add(p_entry)
+        db.session.add(p_entry)
 
-    db_session.commit()
+    db.session.commit()
 
     return jsonify(success=True, match_uuid=match_uuid)
 
@@ -71,7 +71,7 @@ def verify_player():
                                             PlayerMatchResult.match_id == m_entry.id).one()
 
     result.verified = True
-    db_session.commit()
+    db.session.commit()
 
     return jsonify(success=True)
 
@@ -97,7 +97,7 @@ def upload_file():
     m_entry.duration = match_data['duration']
     m_entry.match_uuid = match_uuid
 
-    db_session.commit()
+    db.session.commit()
 
     # Save the match file
     path = os.path.join(matches_folder, match_uuid)
@@ -112,36 +112,66 @@ def _matches_to_list(result):
     matches = []
     for r in result:
         matches.append({
-            'steamid': r.steamid,
             'match_uuid': r.match_uuid,
             'duration': r.duration,
             'start_date': r.start_date,
             'mode': r.mode,
             'map': r.map,
         })
+        if hasattr(r, 'steamid'):
+            matches[-1]['steamid'] = r.steamid
         if hasattr(r, 'verified'):
             matches[-1]['verified'] = r.verified
     return matches
 
 
-@app.route('/player/matches/list/<steamid>', methods=['GET', 'POST'])
-def list_matches_for_steamid(steamid):
+@app.route('/player/matches/list/<steamid>/<page>', methods=['GET', 'POST'])
+def list_matches_for_steamid(steamid, page):
     """ Lists the match history for a player. """
     steamid = build_steamid(steamid)
+    page = int(page)
+    per_page = int(request.values.get('per_page', app.config['MAX_MATCHES_PER_PAGE']))
 
-    result = Match.query.join(PlayerMatchResult, Match.id == PlayerMatchResult.match_id) \
+    p = Match.query.join(PlayerMatchResult, Match.id == PlayerMatchResult.match_id) \
         .add_columns(PlayerMatchResult.steamid, Match.match_uuid, Match.map, Match.mode,
                      Match.duration, Match.start_date, PlayerMatchResult.verified) \
-        .filter(PlayerMatchResult.steamid == steamid.as_64()).all()
+        .filter(PlayerMatchResult.steamid == steamid.as_64()) \
+        .paginate(page, per_page, False)
 
-    return jsonify({'matches': _matches_to_list(result)})
+    return jsonify({
+        'matches': _matches_to_list(p.items),
+        'total': p.total,
+        'per_page': p.per_page,
+        'page': p.page,
+    })
+
+
+@app.route('/player/matches/list/<steamid>', methods=['GET', 'POST'])
+def list_matches_for_steamid_first_page(steamid):
+    return list_matches_for_steamid(steamid, 1)
+
+
+@app.route('/matches/list/<page>', methods=['GET', 'POST'])
+def list_matches(page):
+    page = int(page)
+    per_page = int(request.values.get('per_page', app.config['MAX_MATCHES_PER_PAGE']))
+
+    p = Match.query.add_columns(Match.match_uuid, Match.map, Match.mode,
+                     Match.duration, Match.start_date) \
+                    .order_by(Match.start_date.desc()) \
+                    .paginate(page, per_page, False)
+
+    return jsonify({
+        'matches': _matches_to_list(p.items),
+        'total': p.total,
+        'per_page': p.per_page,
+        'page': p.page,
+    })
 
 
 @app.route('/matches/list', methods=['GET', 'POST'])
-def list_matches():
-    result = Match.query.add_columns(PlayerMatchResult.steamid, Match.match_uuid, Match.map, Match.mode,
-                     Match.duration, Match.start_date).all()
-    return jsonify({'matches': _matches_to_list(result)})
+def list_matches_first_page():
+    return list_matches(1)
 
 
 @app.route('/player/matches/get/<match_uuid>', methods=['GET', 'POST'])

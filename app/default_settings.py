@@ -1,7 +1,9 @@
 DEBUG = False
 TESTING = False
 SQLALCHEMY_DATABASE_URI = 'sqlite:///tmp/test.db'
+SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+MAX_MATCHES_PER_PAGE = 100
 MATCHES_FOLDER = 'matches'
 
 # Steam backend url
