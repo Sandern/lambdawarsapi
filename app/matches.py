@@ -136,6 +136,7 @@ def list_matches_for_steamid(steamid, page):
         .add_columns(PlayerMatchResult.steamid, Match.match_uuid, Match.map, Match.mode,
                      Match.duration, Match.start_date, PlayerMatchResult.verified) \
         .filter(PlayerMatchResult.steamid == steamid.as_64()) \
+        .order_by(Match.start_date.desc()) \
         .paginate(page, per_page, False)
 
     return jsonify({
