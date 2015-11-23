@@ -13,6 +13,7 @@ class Match(db.Model):
     start_date = db.Column(db.DateTime, nullable=False)
     mode = db.Column(db.String(150), nullable=False)
     map = db.Column(db.String(150), nullable=False)
+    type = db.Column(db.String(150), nullable=False)
 
     # Metadata set when match is finished
     duration = db.Column(db.Float)
@@ -25,3 +26,5 @@ class PlayerMatchResult(db.Model):
     match_id = db.Column(db.Integer, db.ForeignKey(Match.id), nullable=False)
     # The Game Server creates the initial entries, the players must send a request to confirm they are in the match
     verified = db.Column(db.Boolean, nullable=False)
+    # End state of this player (won, lost, draw). As string so we could have more states later.
+    end_state = db.Column(db.String(150))

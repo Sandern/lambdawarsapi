@@ -1,4 +1,5 @@
 from flask import request, jsonify
+from sqlalchemy.orm.exc import NoResultFound
 from . import app
 import uuid
 import os
@@ -6,7 +7,7 @@ import zipfile
 import json
 from datetime import datetime
 
-from .util import build_steamid, authenticate_ticket
+from .util import build_steamid, authenticate_ticket, validate_uuid4
 from .database import db
 from .models import Match, PlayerMatchResult
 
@@ -31,6 +32,7 @@ def record_match_start():
     m_entry.start_date = datetime.strptime(match_data['start_date'], '%Y-%m-%d %H:%M:%S')
     m_entry.mode = match_data['mode']
     m_entry.map = match_data['map']
+    m_entry.type = match_data['type']
     m_entry.match_uuid = match_uuid
 
     db.session.add(m_entry)
@@ -76,8 +78,20 @@ def verify_player():
     return jsonify(success=True)
 
 
+def _find_player_data(players, steamid):
+    for data in players.values():
+        if 'steamid' not in data:
+            continue
+
+        player_steamid = build_steamid(data['steamid'])
+        if player_steamid.as_64() == steamid.as_64():
+            return data
+
+    return None
+
+
 @app.route('/matches/upload', methods=['POST'])
-def upload_file():
+def record_match_end():
     """ Records a match result from a game server. """
     match_uuid = request.form.get("match_uuid")
 
@@ -96,6 +110,20 @@ def upload_file():
     # Update match metadata
     m_entry.duration = match_data['duration']
     m_entry.match_uuid = match_uuid
+
+    # Update end state of each player
+    players = match_data.get('players', {})
+    #losers = match_data.get('losers', [])
+    winners = match_data.get('winners', [])
+
+    player_results = PlayerMatchResult.query.filter(PlayerMatchResult.match_id == Match.id)
+    for pr in player_results:
+        steamid = build_steamid(pr.steamid)
+        player_data = _find_player_data(players, steamid)
+        if not player_data:
+            continue
+
+        pr.end_state = 'won' if player_data.get('owner', -1) in winners else 'lost'
 
     db.session.commit()
 
@@ -117,11 +145,12 @@ def _matches_to_list(result):
             'start_date': r.start_date,
             'mode': r.mode,
             'map': r.map,
+            'type': r.type,
         })
         if hasattr(r, 'steamid'):
             matches[-1]['steamid'] = r.steamid
-        if hasattr(r, 'verified'):
             matches[-1]['verified'] = r.verified
+            matches[-1]['end_state'] = r.end_state
     return matches
 
 
@@ -133,8 +162,9 @@ def list_matches_for_steamid(steamid, page):
     per_page = int(request.values.get('per_page', app.config['MAX_MATCHES_PER_PAGE']))
 
     p = Match.query.join(PlayerMatchResult, Match.id == PlayerMatchResult.match_id) \
-        .add_columns(PlayerMatchResult.steamid, Match.match_uuid, Match.map, Match.mode,
-                     Match.duration, Match.start_date, PlayerMatchResult.verified) \
+        .add_columns(PlayerMatchResult.steamid, Match.match_uuid, Match.map, Match.mode, Match.type,
+                     Match.duration, Match.start_date, PlayerMatchResult.verified,
+                     PlayerMatchResult.end_state) \
         .filter(PlayerMatchResult.steamid == steamid.as_64()) \
         .order_by(Match.start_date.desc()) \
         .paginate(page, per_page, False)
@@ -157,7 +187,7 @@ def list_matches(page):
     page = int(page)
     per_page = int(request.values.get('per_page', app.config['MAX_MATCHES_PER_PAGE']))
 
-    p = Match.query.add_columns(Match.match_uuid, Match.map, Match.mode,
+    p = Match.query.add_columns(Match.match_uuid, Match.map, Match.mode, Match.type,
                      Match.duration, Match.start_date) \
                     .order_by(Match.start_date.desc()) \
                     .paginate(page, per_page, False)
@@ -177,10 +207,18 @@ def list_matches_first_page():
 
 @app.route('/player/matches/get/<match_uuid>', methods=['GET', 'POST'])
 def get_matches_for_uuid(match_uuid):
-    result = Match.query.filter(Match.match_uuid == match_uuid).one()
-    if not result:
+    if not validate_uuid4(match_uuid):
         return jsonify({
-            'success': False
+            'success': False,
+            'error_msg': 'match uuid is not valid',
+        })
+
+    try:
+        Match.query.filter(Match.match_uuid == match_uuid).one()
+    except NoResultFound:
+        return jsonify({
+            'success': False,
+            'error_msg': 'no match exists with given uuid',
         })
 
     path = os.path.join(matches_folder, match_uuid)
