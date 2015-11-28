@@ -6,6 +6,8 @@ SQLALCHEMY_TRACK_MODIFICATIONS = False
 MAX_MATCHES_PER_PAGE = 100
 MATCHES_FOLDER = 'matches'
 
+LOG_PATH = 'errors.log'
+
 # Steam backend url
 STEAM_API_BACKEND_URL = 'https://api.steampowered.com/'
 
