@@ -9,7 +9,7 @@ auth_url = app.config['STEAM_API_BACKEND_URL'] + 'ISteamUserAuth/AuthenticateUse
 
 
 def build_steamid(steamid_unparsed):
-    if type(steamid_unparsed) is int or steamid_unparsed.isdigit():
+    if type(steamid_unparsed) is not str or steamid_unparsed.isdigit():
         universe, steam_type, instance, account_number = bitstruct.unpack('u8u4u20u32',
                              bitstruct.pack('u64', int(steamid_unparsed)))
 
