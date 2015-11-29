@@ -3,7 +3,7 @@
 - Python
 - Virtualenv: pip install virtualenv
 
-# Setup (install + database)
+# Setup
 
 1. virtualenv venv
 2. venv/bin/activate
