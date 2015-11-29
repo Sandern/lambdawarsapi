@@ -79,15 +79,15 @@ def verify_player():
 
 
 def _find_player_data(players, steamid):
-    for data in players.values():
+    for owner, data in players.items():
         if 'steamid' not in data:
             continue
 
         player_steamid = build_steamid(data['steamid'])
         if player_steamid.as_64() == steamid.as_64():
-            return data
+            return data, owner
 
-    return None
+    return None, -1
 
 
 @app.route('/matches/upload', methods=['POST'])
@@ -113,17 +113,17 @@ def record_match_end():
 
     # Update end state of each player
     players = match_data.get('players', {})
-    #losers = match_data.get('losers', [])
-    winners = match_data.get('winners', [])
+    #losers = map(int, match_data.get('losers', []))
+    winners = map(int, match_data.get('winners', []))
 
-    player_results = PlayerMatchResult.query.filter(PlayerMatchResult.match_id == Match.id)
+    player_results = PlayerMatchResult.query.filter(PlayerMatchResult.match_id == m_entry.id)
     for pr in player_results:
         steamid = build_steamid(pr.steamid)
-        player_data = _find_player_data(players, steamid)
+        player_data, owner = _find_player_data(players, steamid)
         if not player_data:
             continue
 
-        pr.end_state = 'won' if player_data.get('owner', -1) in winners else 'lost'
+        pr.end_state = 'won' if int(owner) in winners else 'lost'
 
     db.session.commit()
 
