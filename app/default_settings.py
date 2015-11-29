@@ -9,7 +9,7 @@ MATCHES_FOLDER = 'matches'
 LOG_PATH = 'errors.log'
 
 # Steam backend url
-STEAM_API_BACKEND_URL = 'https://api.steampowered.com/'
+STEAM_API_BACKEND_URL = 'https://partner.steam-api.com:443/'
 
 # https://partner.steamgames.com/documentation/auth#client_to_backend_webapi
 PUBLISHER_WEBAPI_KEY = ''
