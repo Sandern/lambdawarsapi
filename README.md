@@ -18,7 +18,7 @@
 
 By default it creates a sqlite database. To connect to a mysql database, do:
 
-1. Install the MySQLdb module: pip install python-mysql
+1. Install the MySQLdb module: pip install MySQL-python
 2. Open instance/application.cfg (create if needed)
 3. Add the following configuration line and adjust for your database:
 ```SQLALCHEMY_DATABASE_URI = 'mysql://username:password@server/database'```

@@ -65,12 +65,15 @@ def verify_player():
 
     steamid = authenticate_ticket(auth_ticket)
     if not steamid:
-        return jsonify(success=False)
+        return jsonify(success=False, error_msg='Failed to authenticate ticket')
 
     m_entry = Match.query.filter(Match.match_uuid == match_uuid).one()
 
-    result = PlayerMatchResult.query.filter(PlayerMatchResult.steamid == steamid.as_64(),
-                                            PlayerMatchResult.match_id == m_entry.id).one()
+    try:
+        result = PlayerMatchResult.query.filter(PlayerMatchResult.steamid == steamid.as_64(),
+                                                PlayerMatchResult.match_id == m_entry.id).one()
+    except NoResultFound:
+        return jsonify(success=False, error_msg='No match entry found for player')
 
     result.verified = True
     db.session.commit()
@@ -223,8 +226,14 @@ def get_matches_for_uuid(match_uuid):
 
     path = os.path.join(matches_folder, match_uuid)
 
-    with open(path, 'rb') as f:
-        z = zipfile.ZipFile(f)
-        match_data = json.loads(z.read('stats.json').decode("utf-8"))
+    try:
+        with open(path, 'rb') as f:
+            z = zipfile.ZipFile(f)
+            match_data = json.loads(z.read('stats.json').decode("utf-8"))
+    except IOError:
+        return jsonify({
+            'success': False,
+            'error_msg': 'match data is not yet uploaded or is corrupted',
+        })
 
     return jsonify(match_data)
