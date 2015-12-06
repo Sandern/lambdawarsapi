@@ -17,12 +17,15 @@ def build_steamid(steamid_unparsed):
         universe, steam_type, instance, account_number = bitstruct.unpack('u8u4u20u32',
                              bitstruct.pack('u64', long(steamid_unparsed)))
 
-        if instance == 1:
-            instance = 0
-            account_number = long(account_number / 2)
+        # Bit confusing, but convert from ID64 to STEAM_0:A:B format
+        # See https://developer.valvesoftware.com/wiki/SteamID
+        instance = 0
+        if account_number % 2 == 1:
+            instance = 1
+            account_number -= 1
+        account_number = long(account_number / 2)
 
         return SteamID(account_number, instance, steam_type, universe)
-
 
     return SteamID.from_text(steamid_unparsed)
 
