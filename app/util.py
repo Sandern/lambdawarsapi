@@ -2,8 +2,12 @@ from valve.steam.id import SteamID
 import bitstruct
 import requests
 from uuid import UUID
+import sys
 
 from . import app
+
+if sys.version_info > (3,):
+    long = int
 
 auth_url = app.config['STEAM_API_BACKEND_URL'] + 'ISteamUserAuth/AuthenticateUserTicket/v0001'
 
@@ -11,17 +15,16 @@ auth_url = app.config['STEAM_API_BACKEND_URL'] + 'ISteamUserAuth/AuthenticateUse
 def build_steamid(steamid_unparsed):
     if str(steamid_unparsed).isdigit():
         universe, steam_type, instance, account_number = bitstruct.unpack('u8u4u20u32',
-                             bitstruct.pack('u64', int(steamid_unparsed)))
+                             bitstruct.pack('u64', long(steamid_unparsed)))
 
         if instance == 1:
             instance = 0
-            account_number = int(account_number / 2)
+            account_number = long(account_number / 2)
 
         return SteamID(account_number, instance, steam_type, universe)
 
 
-    id = SteamID.from_text(steamid_unparsed)
-    return id
+    return SteamID.from_text(steamid_unparsed)
 
 
 def authenticate_ticket(ticket):
