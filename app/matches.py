@@ -22,6 +22,8 @@ if not os.path.exists(matches_folder):
 @app.route('/matches/record_start', methods=['POST'])
 def record_match_start():
     match_data = request.get_json()
+    if match_data is None:
+        return jsonify(success=False, error_msg='Missing json body')
 
     # Create the match id
     match_uuid = uuid.uuid4().hex
@@ -29,7 +31,7 @@ def record_match_start():
     # Create the match entry
     m_entry = Match()
     m_entry.submitter_ip = request.remote_addr
-    m_entry.start_date = datetime.strptime(match_data['start_date'], '%Y-%m-%d %H:%M:%S')
+    m_entry.start_date = datetime.strptime(match_data.get('start_date', datetime.now()), '%Y-%m-%d %H:%M:%S')
     m_entry.mode = match_data['mode']
     m_entry.map = match_data['map']
     m_entry.type = match_data['type']
