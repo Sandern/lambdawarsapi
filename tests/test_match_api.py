@@ -2,7 +2,7 @@ from flask import json
 from datetime import datetime
 from .flask_test_base import FlaskrTestCase
 
-class MatchRecordingTestCase(FlaskrTestCase):
+class MatchApiTestCase(FlaskrTestCase):
     def test_landing_url(self):
         rv = self.app.get('/')
         assert b'Lambda Wars API' in rv.data
@@ -29,3 +29,20 @@ class MatchRecordingTestCase(FlaskrTestCase):
         data = json.loads(response.data)
         self.assertIn('success', data)
         self.assertEqual(data['success'], True, msg=data)
+
+        # Newest entry in list
+        response = self.app.post('/matches/list', data=json.dumps({}))
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+
+        self.assertIn('matches', data)
+        self.assertIn('page', data)
+        self.assertIn('per_page', data)
+        self.assertIn('total', data)
+
+        self.assertEqual(data['page'], 1)
+
+        match_data = data['matches'][0]
+        self.assertEqual(match_data['map'], 'hlw_woodland')
+        self.assertEqual(match_data['mode'], 'annihilation')
+        self.assertEqual(match_data['type'], '2vs2')
