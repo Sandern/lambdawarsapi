@@ -1,3 +1,7 @@
+# Description
+A simple match history API for the Lambda Wars game (http://lambdawars.com), written using Flask.
+Provides rest api to record or retrieves matches and validates the players against the Steam api.
+
 # Requirements
 
 - Python
