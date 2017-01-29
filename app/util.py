@@ -53,17 +53,25 @@ def authenticate_ticket(ticket):
 
     resp = r.json()
 
-    print('Steam api response: ', resp)
-
     try:
-        params = resp['response']['params']
+        response = resp['response']
+
+        if 'params' in response:
+            params = resp['response']['params']
+            if params['result'] != 'OK':
+                return None
+
+            return build_steamid(params['steamid'])
+        elif 'error' in response:
+            error = response['error']
+            # Invalid ticket case
+            if error['errorcode'] == 101:
+                return None
     except KeyError:
-        raise Exception('Unexpected response from %s:\n%s' % (auth_url, resp))
+        # Fallthrough to exception
+        pass
 
-    if params['result'] != 'OK':
-        return None
-
-    return build_steamid(params['steamid'])
+    raise Exception('Unexpected response from %s:\n%s' % (auth_url, resp))
 
 
 def validate_uuid4(uuid_string):
