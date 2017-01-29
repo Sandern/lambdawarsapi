@@ -55,7 +55,10 @@ def authenticate_ticket(ticket):
 
     print('Steam api response: ', resp)
 
-    params = resp['response']['params']
+    try:
+        params = resp['response']['params']
+    except KeyError:
+        raise Exception('Unexpected response from %s:\n%s' % (auth_url, resp))
 
     if params['result'] != 'OK':
         return None
