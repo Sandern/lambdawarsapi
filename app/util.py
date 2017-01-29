@@ -49,6 +49,7 @@ def authenticate_ticket(ticket):
         'appid': 270370,
         'ticket': ticket,
     })
+    r.raise_for_status()
 
     resp = r.json()
 

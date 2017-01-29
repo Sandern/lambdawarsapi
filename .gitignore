@@ -64,3 +64,10 @@ venv
 
 # Flask instance folder
 instance
+
+# Passenger
+passenger_wsgi.py
+
+# Other
+public
+tmp
